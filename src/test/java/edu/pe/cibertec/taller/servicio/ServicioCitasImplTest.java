@@ -1,5 +1,6 @@
 package edu.pe.cibertec.taller.servicio;
 
+import edu.pe.cibertec.taller.excepcion.*;
 import edu.pe.cibertec.taller.repositorio.RepositorioCitas;
 import edu.pe.cibertec.taller.repositorio.RepositorioMecanicos;
 import edu.pe.cibertec.taller.servicio.impl.ServicioCitasImpl;
@@ -16,12 +17,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import edu.pe.cibertec.taller.excepcion.EspecialidadIncorrectaException;
-import edu.pe.cibertec.taller.excepcion.MecanicoNoEncontradoException;
 import edu.pe.cibertec.taller.modelo.*;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
@@ -57,7 +57,7 @@ class ServicioCitasImplTest {
 		LocalDateTime ahora = LocalDateTime.of(2026, 9, 15, 8, 0);
 		LocalDateTime fecha = LocalDateTime.of(2026, 9, 16, 10, 0);
 
-		Mecanico mecanico = new Mecanico(1L, "Niko Flores", TipoServicio.CAMBIO_ACEITE);
+		Mecanico mecanico = new Mecanico(1L, "Nicols Flores", TipoServicio.CAMBIO_ACEITE);
 
 		when(proveedorFechaHora.ahora()).thenReturn(ahora);
 		when(repositorioMecanicos.findById(1L)).thenReturn(Optional.of(mecanico));
@@ -95,7 +95,7 @@ class ServicioCitasImplTest {
 		// Arrange
 		String zafiroPlaca = "FLO-486";
 		LocalDateTime fecha = LocalDateTime.of(2026, 9, 16, 10, 0);
-		Mecanico mecanico = new Mecanico(1L, "Niko Flores", TipoServicio.CAMBIO_ACEITE);
+		Mecanico mecanico = new Mecanico(1L, "Nicols Flores", TipoServicio.CAMBIO_ACEITE);
 		when(repositorioMecanicos.findById(1L)).thenReturn(Optional.of(mecanico));
 
 		// Act y Assert
@@ -108,56 +108,105 @@ class ServicioCitasImplTest {
 	@DisplayName("Un servicio pesado a las 15:00 se rechaza con HorarioNoPermitidoException")
 	void agendarServicioPesadoEnLaTarde() {
 		// Arrange
-		// TODO
+		String zafiro = "FLO-486";
+		Mecanico mecanico = new Mecanico(1L, "Nicols Flores", TipoServicio.REPARACION_MOTOR);
+		LocalDateTime ahora = LocalDateTime.of(2026, 9, 15, 8, 0);
+		LocalDateTime fecha = LocalDateTime.of(2026, 9, 16, 15, 0);
+		when(repositorioMecanicos.findById(1L)).thenReturn(Optional.of(mecanico));
+		when(proveedorFechaHora.ahora()).thenReturn(ahora);
 
 		// Act y Assert
-		// TODO
+		assertThrows(HorarioNoPermitidoException.class,
+				() -> servicioCitas.agendarCita(1L, zafiro, TipoServicio.REPARACION_MOTOR, fecha));
+		verify(repositorioCitas, never()).save(any());
 	}
 
 	@Test
 	@DisplayName("Un servicio pesado a las 09:00 se acepta y se guarda")
 	void agendarServicioPesadoEnLaManana() {
 		// Arrange
-		// TODO
+		String zafiro = "FLO-486";
+		Mecanico mecanico = new Mecanico(1L, "Nicols Flores", TipoServicio.REPARACION_MOTOR);
+		LocalDateTime ahora = LocalDateTime.of(2026, 9, 15, 8, 0);
+		LocalDateTime fecha = LocalDateTime.of(2026, 9, 16, 9, 0);
+		when(repositorioMecanicos.findById(1L)).thenReturn(Optional.of(mecanico));
+		when(proveedorFechaHora.ahora()).thenReturn(ahora);
+		when(repositorioCitas.findByMecanicoIdAndEstado(1L, EstadoCita.PROGRAMADA)).thenReturn(Collections.emptyList());
+		when(repositorioCitas.save(any(Cita.class))).thenAnswer(i -> i.getArgument(0));
 
 		// Act
-		// TODO
+		Cita cita = servicioCitas.agendarCita(1L, zafiro, TipoServicio.REPARACION_MOTOR, fecha);
 
 		// Assert
-		// TODO
+		assertEquals(EstadoCita.PROGRAMADA, cita.getEstado());
+		assertEquals(4, cita.getDuracionHoras());
+		verify(repositorioCitas, times(1)).save(any(Cita.class));
+
 	}
 
 	@Test
 	@DisplayName("Agendar en una fecha del pasado lanza FechaInvalidaException")
 	void agendarConFechaEnElPasado() {
 		// Arrange
-		// TODO: recuerden mockear proveedorFechaHora.ahora()
+		String zafiro = "FLO-486";
+		Mecanico mecanico = new Mecanico(1L, "Nicols Flores", TipoServicio.REPARACION_MOTOR);
+		LocalDateTime ahora = LocalDateTime.of(2026, 9, 15, 8, 0);
+		LocalDateTime fecha = LocalDateTime.of(2026, 9, 14, 10, 0);
+		when(repositorioMecanicos.findById(1L)).thenReturn(Optional.of(mecanico));
+		when(proveedorFechaHora.ahora()).thenReturn(ahora);
 
 		// Act y Assert
-		// TODO
+		assertThrows(FechaInvalidaException.class,
+				() -> servicioCitas.agendarCita(1L, zafiro, TipoServicio.CAMBIO_ACEITE, fecha));
+		verify(repositorioCitas, never()).save(any());
 	}
 
 	@Test
 	@DisplayName("Agendar sobre una cita ya programada se rechaza con HorarioOcupadoException")
 	void agendarConSuperposicion() {
 		// Arrange
-		// TODO
+		String zafiro = "FLO-486";
+		Mecanico mecanico = new Mecanico(1L, "Nicols Flores", TipoServicio.REPARACION_MOTOR);
+		LocalDateTime ahora = LocalDateTime.of(2026, 9, 15, 8, 0);
+		LocalDateTime inicio = LocalDateTime.of(2026, 9, 16, 10, 0);
+		Cita existente = new Cita();
+		existente.setFechaHoraInicio(inicio);
+		existente.setDuracionHoras(1);
+		existente.setEstado(EstadoCita.PROGRAMADA);
+		when(repositorioMecanicos.findById(1L)).thenReturn(Optional.of(mecanico));
+		when(proveedorFechaHora.ahora()).thenReturn(ahora);
+		when(repositorioCitas.findByMecanicoIdAndEstado(1L, EstadoCita.PROGRAMADA)).thenReturn(List.of(existente));
 
 		// Act y Assert
-		// TODO
+		assertThrows(HorarioOcupadoException.class,
+				() -> servicioCitas.agendarCita(1L, zafiro, TipoServicio.REPARACION_MOTOR, inicio));
+		verify(repositorioCitas, never()).save(any());
+
 	}
 
 	@Test
 	@DisplayName("Una cita que empieza justo cuando termina otra se acepta")
 	void agendarCitaContigua() {
 		// Arrange
-		// TODO: una cita existente que termina a las 10:00 y la nueva que empieza a las 10:00
+		String zafiro = "FLO-486";
+		Mecanico mecanico = new Mecanico(1L, "Nicols Flores", TipoServicio.REPARACION_MOTOR);
+		LocalDateTime ahora = LocalDateTime.of(2026, 9, 15, 8, 0);
+		Cita existente = new Cita();
+		existente.setFechaHoraInicio(LocalDateTime.of(2026, 9, 16, 9, 0));
+		existente.setDuracionHoras(1);
+		existente.setEstado(EstadoCita.PROGRAMADA);
+		LocalDateTime nueva = LocalDateTime.of(2026, 9, 16, 10, 0);
+		when(repositorioMecanicos.findById(1L)).thenReturn(Optional.of(mecanico));
+		when(proveedorFechaHora.ahora()).thenReturn(ahora);
+		when(repositorioCitas.findByMecanicoIdAndEstado(1L, EstadoCita.PROGRAMADA)).thenReturn(List.of(existente));
+		when(repositorioCitas.save(any(Cita.class))).thenAnswer(i -> i.getArgument(0));
 
 		// Act
-		// TODO
+		Cita cita = servicioCitas.agendarCita(1L, zafiro, TipoServicio.REPARACION_MOTOR, nueva);
 
 		// Assert
-		// TODO
+		assertEquals(EstadoCita.PROGRAMADA, cita.getEstado());
+		verify(repositorioCitas, times(1)).save(any(Cita.class));
 	}
 
 	@Test
