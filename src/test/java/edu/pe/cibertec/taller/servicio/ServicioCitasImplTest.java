@@ -20,6 +20,7 @@ import static org.mockito.Mockito.*;
 import edu.pe.cibertec.taller.modelo.*;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -294,22 +295,46 @@ class ServicioCitasImplTest {
 	@DisplayName("Buscar mecanico disponible retorna el primero sin citas superpuestas")
 	void buscarMecanicoDisponibleRetornaPrimeroLibre() {
 		// Arrange
-		// TODO: dos mecanicos de la misma especialidad, el primero ocupado
+		LocalDateTime fecha = LocalDateTime.of(2026, 9, 16, 10, 0);
+		Mecanico mecanicoOcupado = new Mecanico(1L, "Nicols Flores", TipoServicio.CAMBIO_ACEITE);
+		Mecanico mecanicoLibre = new Mecanico(2L, "Carlos Pérez", TipoServicio.CAMBIO_ACEITE);
+		Cita citaExistente = new Cita(1L, mecanicoOcupado, "FLO-486",
+				TipoServicio.CAMBIO_ACEITE, fecha, 1, EstadoCita.PROGRAMADA);
+		when(repositorioMecanicos.findByEspecialidad(TipoServicio.CAMBIO_ACEITE))
+				.thenReturn(Arrays.asList(mecanicoOcupado, mecanicoLibre));
+		when(repositorioCitas.findByMecanicoIdAndEstado(1L, EstadoCita.PROGRAMADA))
+				.thenReturn(Collections.singletonList(citaExistente));
+		when(repositorioCitas.findByMecanicoIdAndEstado(2L, EstadoCita.PROGRAMADA))
+				.thenReturn(Collections.emptyList());
 
 		// Act
-		// TODO
+		Mecanico elegido = servicioCitas.buscarMecanicoDisponible(TipoServicio.CAMBIO_ACEITE, fecha);
 
 		// Assert
-		// TODO
+		assertEquals(mecanicoLibre.getId(), elegido.getId());
+		assertEquals("Carlos Pérez", elegido.getNombre());
 	}
 
 	@Test
 	@DisplayName("Buscar mecanico cuando ninguno esta libre lanza SinDisponibilidadException")
 	void buscarMecanicoSinDisponibilidad() {
 		// Arrange
-		// TODO
+		LocalDateTime fecha = LocalDateTime.of(2026, 9, 16, 10, 0);
+		Mecanico mecanico1 = new Mecanico(1L, "Nicols Flores Uribe", TipoServicio.CAMBIO_ACEITE);
+		Mecanico mecanico2 = new Mecanico(2L, "Carlos Pérez", TipoServicio.CAMBIO_ACEITE);
+		Cita cita1 = new Cita(1L, mecanico1, "FLO-486",
+				TipoServicio.CAMBIO_ACEITE, fecha, 1, EstadoCita.PROGRAMADA);
+		Cita cita2 = new Cita(2L, mecanico2, "CAR-486",
+				TipoServicio.CAMBIO_ACEITE, fecha, 1, EstadoCita.PROGRAMADA);
+		when(repositorioMecanicos.findByEspecialidad(TipoServicio.CAMBIO_ACEITE))
+				.thenReturn(Arrays.asList(mecanico1, mecanico2));
+		when(repositorioCitas.findByMecanicoIdAndEstado(1L, EstadoCita.PROGRAMADA))
+				.thenReturn(Collections.singletonList(cita1));
+		when(repositorioCitas.findByMecanicoIdAndEstado(2L, EstadoCita.PROGRAMADA))
+				.thenReturn(Collections.singletonList(cita2));
 
 		// Act y Assert
-		// TODO
+		assertThrows(SinDisponibilidadException.class,
+				() -> servicioCitas.buscarMecanicoDisponible(TipoServicio.CAMBIO_ACEITE, fecha));
 	}
 }

@@ -27,6 +27,6 @@ public class GestionCitasSteps {
 				proveedorFechaHora, servicioNotificaciones);
 	}
 
-	// TODO: implementar aqui los pasos de los escenarios con
-	// @Given, @When, @Then y @And (io.cucumber.java.en)
+	// TODO: implementar aqui los pasos de los escenarios
+	/// @Given, @When, @Then y @And (io.cucumber.java.en)
 }
