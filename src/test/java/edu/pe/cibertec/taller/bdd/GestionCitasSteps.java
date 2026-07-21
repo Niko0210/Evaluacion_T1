@@ -73,6 +73,14 @@ public class GestionCitasSteps {
 		verify(servicioNotificaciones).notificarCitaAgendada(any(Cita.class));
 	}
 
+	@Given("la fecha actual es {string}")
+	public void laFechaActualEs(String fechaActual) {
+		when(proveedorFechaHora.ahora())
+				.thenReturn(LocalDateTime.parse(fechaActual));
+		when(repositorioCitas.save(any(Cita.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+	}
 	@Then("se lanza la excepcion HorarioNoPermitidoException")
 	public void lanzaLaExcepcionHorarioNoPermitidoException() {
 		assertNotNull(excepcion);
