@@ -48,7 +48,7 @@ public class GestionCitasSteps {
 
 	// TODO: implementar aqui los pasos de los escenarios
 	@Given("un mecanico disponible con especialidad {string}")
-	public void unMecanicoDisponibleConEspecialidad(String especialidad) {
+	public void mecanicoDisponibleConEspecialidades(String especialidad) {
 		mecanico = new Mecanico(1L, "Nicols Flores", TipoServicio.valueOf(especialidad));
 		when(repositorioMecanicos.findById(1L)).thenReturn(Optional.of(mecanico));
 		when(proveedorFechaHora.ahora()).thenReturn(LocalDateTime.of(2026,9,15,8,0));
@@ -73,22 +73,6 @@ public class GestionCitasSteps {
 		verify(servicioNotificaciones).notificarCitaAgendada(any(Cita.class));
 	}
 
-	@Given("un mecanico disponible con especialidad {string}")
-	public void mecanicoDisponibleConEspecialidad(String especialidad) {
-		mecanico = new Mecanico(1L, "Nicols Flores", TipoServicio.valueOf(especialidad));
-		when(repositorioMecanicos.findById(1L)).thenReturn(Optional.of(mecanico));
-		when(proveedorFechaHora.ahora()).thenReturn(LocalDateTime.of(2026, 9, 15, 8, 0));
-		when(repositorioCitas.findByMecanicoIdAndEstado(1L, EstadoCita.PROGRAMADA)).thenReturn(Collections.emptyList());
-		when(repositorioCitas.save(any(Cita.class))).thenAnswer(i -> i.getArgument(0));
-	}
-	@When("agendo una cita para el vehiculo {string} en la fecha {string}")
-	public void agendoUnaCitaParaElVehiculoEnFecha(String placa, String fecha) {
-		try {
-			cita = servicioCitas.agendarCita(1L, placa, mecanico.getEspecialidad(), LocalDateTime.parse(fecha));
-		} catch (Exception e) {
-			excepcion = e;
-		}
-	}
 	@Then("se lanza la excepcion HorarioNoPermitidoException")
 	public void lanzaLaExcepcionHorarioNoPermitidoException() {
 		assertNotNull(excepcion);
@@ -122,10 +106,10 @@ public class GestionCitasSteps {
 		assertNotNull(resultadoCancelacion);
 		assertEquals(EstadoCita.CANCELADA, cita.getEstado());
 	}
-	@And("se aplica una penalidad de 50.00")
-	public void aplicaUnaPenalidad_de_50() {
-		assertEquals(50.0, resultadoCancelacion.getMontoPenalidad());
-		verify(servicioNotificaciones).notificarCitaCancelada(cita);
+	@And("la fecha actual es {string}")
+	public void laFechaActualEs(String fecha) {
+		when(proveedorFechaHora.ahora()).thenReturn(LocalDateTime.parse(fecha));
+		when(repositorioCitas.save(any(Cita.class))).thenReturn(cita);
 	}
 
 	@Given("un mecanico con una cita ya programada en {string}")
