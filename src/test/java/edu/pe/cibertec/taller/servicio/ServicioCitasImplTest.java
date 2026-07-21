@@ -12,6 +12,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+import edu.pe.cibertec.taller.excepcion.EspecialidadIncorrectaException;
+import edu.pe.cibertec.taller.excepcion.MecanicoNoEncontradoException;
+import edu.pe.cibertec.taller.modelo.*;
+
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Optional;
+
 @ExtendWith(MockitoExtension.class)
 class ServicioCitasImplTest {
 
@@ -40,33 +52,56 @@ class ServicioCitasImplTest {
 	@DisplayName("Agendar una cita valida la guarda, notifica y la retorna en estado PROGRAMADA")
 	void agendarCitaExitosa() {
 		// Arrange
-		// TODO
+		String zafiroPlaca = "FLO-486";
+
+		LocalDateTime ahora = LocalDateTime.of(2026, 9, 15, 8, 0);
+		LocalDateTime fecha = LocalDateTime.of(2026, 9, 16, 10, 0);
+
+		Mecanico mecanico = new Mecanico(1L, "Niko Flores", TipoServicio.CAMBIO_ACEITE);
+
+		when(proveedorFechaHora.ahora()).thenReturn(ahora);
+		when(repositorioMecanicos.findById(1L)).thenReturn(Optional.of(mecanico));
+		when(repositorioCitas.findByMecanicoIdAndEstado(1L, EstadoCita.PROGRAMADA)).thenReturn(Collections.emptyList());
+		when(repositorioCitas.save(any(Cita.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		// Act
-		// TODO
+		Cita cita = servicioCitas.agendarCita(1L, zafiroPlaca, TipoServicio.CAMBIO_ACEITE, fecha);
 
 		// Assert
-		// TODO: verificar estado, duracion, save y notificacion
+		assertEquals(EstadoCita.PROGRAMADA, cita.getEstado());
+		assertEquals(1, cita.getDuracionHoras());
+		verify(repositorioCitas, times(1)).save(any(Cita.class));
+		verify(servicioNotificaciones, times(1)).notificarCitaAgendada(any(Cita.class));
 	}
 
 	@Test
 	@DisplayName("Agendar con un mecanico inexistente lanza MecanicoNoEncontradoException")
 	void agendarConMecanicoInexistente() {
 		// Arrange
-		// TODO
+		String zafiroPlaca = "FLO-486";
+
+		LocalDateTime fecha = LocalDateTime.of(2026, 9, 16, 10, 0);
+		when(repositorioMecanicos.findById(99L)).thenReturn(Optional.empty());
 
 		// Act y Assert
-		// TODO
+		assertThrows(MecanicoNoEncontradoException.class,
+				() -> servicioCitas.agendarCita(99L, zafiroPlaca, TipoServicio.CAMBIO_ACEITE, fecha));
+		verify(repositorioCitas, never()).save(any());
 	}
 
 	@Test
 	@DisplayName("Agendar cuando la especialidad no coincide lanza EspecialidadIncorrectaException")
 	void agendarConEspecialidadIncorrecta() {
 		// Arrange
-		// TODO
+		String zafiroPlaca = "FLO-486";
+		LocalDateTime fecha = LocalDateTime.of(2026, 9, 16, 10, 0);
+		Mecanico mecanico = new Mecanico(1L, "Niko Flores", TipoServicio.CAMBIO_ACEITE);
+		when(repositorioMecanicos.findById(1L)).thenReturn(Optional.of(mecanico));
 
 		// Act y Assert
-		// TODO
+		assertThrows(EspecialidadIncorrectaException.class,
+				() -> servicioCitas.agendarCita(1L, zafiroPlaca, TipoServicio.REPARACION_MOTOR, fecha));
+		verify(repositorioCitas, never()).save(any());
 	}
 
 	@Test
