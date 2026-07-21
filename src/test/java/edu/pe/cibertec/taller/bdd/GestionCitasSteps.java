@@ -106,10 +106,11 @@ public class GestionCitasSteps {
 		assertNotNull(resultadoCancelacion);
 		assertEquals(EstadoCita.CANCELADA, cita.getEstado());
 	}
-	@And("la fecha actual es {string}")
-	public void laFechaActualEs(String fecha) {
-		when(proveedorFechaHora.ahora()).thenReturn(LocalDateTime.parse(fecha));
-		when(repositorioCitas.save(any(Cita.class))).thenReturn(cita);
+	@Then("se aplica una penalidad de {double}")
+	public void aplicaUnaPenalidadDe(Double monto) {
+		assertNotNull(resultadoCancelacion);
+		assertEquals(monto, resultadoCancelacion.getMontoPenalidad());
+		verify(servicioNotificaciones).notificarCitaCancelada(cita);
 	}
 
 	@Given("un mecanico con una cita ya programada en {string}")
