@@ -113,7 +113,6 @@ class ServicioCitasImplTest {
 		LocalDateTime ahora = LocalDateTime.of(2026, 9, 15, 8, 0);
 		LocalDateTime fecha = LocalDateTime.of(2026, 9, 16, 15, 0);
 		when(repositorioMecanicos.findById(1L)).thenReturn(Optional.of(mecanico));
-		when(proveedorFechaHora.ahora()).thenReturn(ahora);
 
 		// Act y Assert
 		assertThrows(HorarioNoPermitidoException.class,
@@ -157,7 +156,7 @@ class ServicioCitasImplTest {
 
 		// Act y Assert
 		assertThrows(FechaInvalidaException.class,
-				() -> servicioCitas.agendarCita(1L, zafiro, TipoServicio.CAMBIO_ACEITE, fecha));
+				() -> servicioCitas.agendarCita(1L, zafiro, TipoServicio.REPARACION_MOTOR, fecha));
 		verify(repositorioCitas, never()).save(any());
 	}
 
@@ -213,46 +212,82 @@ class ServicioCitasImplTest {
 	@DisplayName("Cancelar con 24 horas o mas de anticipacion no genera penalidad")
 	void cancelarConAnticipacionSuficiente() {
 		// Arrange
-		// TODO
+		String zafiro = "FLO-486";
+		LocalDateTime ahora = LocalDateTime.of(2026, 9, 15, 10, 0);
+		Cita cita = new Cita();
+		cita.setId(1L);
+		cita.setPlacaVehiculo(zafiro);
+		cita.setTipoServicio(TipoServicio.CAMBIO_ACEITE);
+		cita.setFechaHoraInicio(LocalDateTime.of(2026, 9, 16, 10, 0));
+		cita.setEstado(EstadoCita.PROGRAMADA);
+		when(proveedorFechaHora.ahora()).thenReturn(ahora);
+		when(repositorioCitas.findById(1L)).thenReturn(Optional.of(cita));
+		when(repositorioCitas.save(any(Cita.class))).thenReturn(cita);
 
 		// Act
-		// TODO
+		ResultadoCancelacion resultado = servicioCitas.cancelarCita(1L);
 
 		// Assert
-		// TODO: penalidad 0, estado CANCELADA, notificacion
+		assertTrue(resultado.isExitoso());
+		assertEquals(0.0, resultado.getMontoPenalidad());
+		assertEquals(EstadoCita.CANCELADA, cita.getEstado());
+		verify(servicioNotificaciones, times(1)).notificarCitaCancelada(cita);
 	}
 
 	@Test
 	@DisplayName("Cancelar con menos de 24 horas aplica una penalidad de 50.00")
 	void cancelarConAvisoTardio() {
 		// Arrange
-		// TODO
+		String zafiro = "FLO-486";
+		LocalDateTime ahora = LocalDateTime.of(2026, 9, 16, 8, 0);
+		Cita cita = new Cita();
+		cita.setId(1L);
+		cita.setPlacaVehiculo(zafiro);
+		cita.setTipoServicio(TipoServicio.CAMBIO_ACEITE);
+		cita.setFechaHoraInicio(LocalDateTime.of(2026, 9, 16, 10, 0));
+		cita.setEstado(EstadoCita.PROGRAMADA);
+		when(proveedorFechaHora.ahora()).thenReturn(ahora);
+		when(repositorioCitas.findById(1L)).thenReturn(Optional.of(cita));
+		when(repositorioCitas.save(any(Cita.class))).thenReturn(cita);
 
 		// Act
-		// TODO
+		ResultadoCancelacion resultado = servicioCitas.cancelarCita(1L);
 
 		// Assert
-		// TODO
+		assertTrue(resultado.isExitoso());
+		assertEquals(50.0, resultado.getMontoPenalidad());
+		assertEquals(EstadoCita.CANCELADA, cita.getEstado());
+		verify(servicioNotificaciones, times(1)).notificarCitaCancelada(cita);
 	}
 
 	@Test
 	@DisplayName("Cancelar una cita inexistente lanza CitaNoEncontradaException")
 	void cancelarCitaInexistente() {
 		// Arrange
-		// TODO
+		String zafiro = "FLO-486";
+		when(repositorioCitas.findById(99L)).thenReturn(Optional.empty());
 
 		// Act y Assert
-		// TODO
+		assertThrows(CitaNoEncontradaException.class, () -> servicioCitas.cancelarCita(99L));
+		verify(repositorioCitas, never()).save(any());
+		verify(servicioNotificaciones, never()).notificarCitaCancelada(any());
 	}
 
 	@Test
 	@DisplayName("Cancelar una cita que ya fue cancelada lanza CitaNoCancelableException")
 	void cancelarCitaYaCancelada() {
 		// Arrange
-		// TODO
+		String zafiro = "FLO-486";
+		Cita cita = new Cita();
+		cita.setId(1L);
+		cita.setPlacaVehiculo(zafiro);
+		cita.setEstado(EstadoCita.CANCELADA);
+		when(repositorioCitas.findById(1L)).thenReturn(Optional.of(cita));
 
 		// Act y Assert
-		// TODO
+		assertThrows(CitaNoCancelableException.class, () -> servicioCitas.cancelarCita(1L));
+		verify(repositorioCitas, never()).save(any());
+		verify(servicioNotificaciones, never()).notificarCitaCancelada(any());
 	}
 
 	@Test
